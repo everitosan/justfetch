@@ -35,6 +35,18 @@ export class FetchError extends Error {
 
 export type ErrorMiddleware = (httpResponse: Response) => void
 
+type Options = {
+  mode?: RequestMode,
+  credentials?: RequestCredentials
+}
+
+
+type RequesElements = {
+  options?: Options
+  headers?: Headers,
+  payload: Array<any> | Object,
+  rawResponse: boolean
+}
 
 /*
 * Fetch base classs
@@ -46,13 +58,16 @@ export class Fetch {
   protected errorMiddlewares: Map<FetchErrorType, Array<ErrorMiddleware>> = new Map()
   protected aditionalData: Map<string, any> = new Map()
 
+  protected globalOptions: Options = {}
+  protected globalHeaders = new Headers()
+
   constructor(url: string) {
     this.base = url
     return this
   }
 
   /*
-  * Add global data for all requests
+  * Global payload for all requests
   */
   public addGlobalPayload (key: string, data: any = {}) {
     this.aditionalData.set(key, data)
@@ -69,17 +84,22 @@ export class Fetch {
   }
 
   /*
-  * Authorization Token (JWT)
+  * Global headers
   */
-  public setAuthToken(prefix="JWT", token: string) {
-    this.jwtToken = `${prefix} ${token}`
+ public addHeader(key: string, value: string) {
+  this.globalHeaders.set(key, value)
+  return this
+ }
+
+  /*
+  * Configure gloabl options
+  */
+
+  public setOptions(options: Options) {
+    this.globalOptions = options
     return this
   }
 
-  public deleteAuthToken() {
-    this.jwtToken = null
-    return this
-  }
 
   /*
    * Add callbacks that will be called when an error happens at any request made 
@@ -124,26 +144,24 @@ export class Fetch {
     throw new FetchError(errorType, response, status)
   }
 
-  /*
-  * Bluid header at every request
-  */
-  protected  buildHeaders(contentType="application/json") {
-    const headers = new Headers();
-    headers.set('Content-Type', contentType)
+  private buildRequestDetails(e: RequesElements) {
+    const headers = this.globalHeaders
+    const payload = this.getGlobalPayload()
+    const options = this.globalOptions
 
-    if (this.jwtToken) {
-      headers.set("Authorization",this.jwtToken)
-    }
-  
-    return headers
+    // if (e.headers) {
+    //   e.headers.forEach(h => headers )
+    // }
   }
+
 
   /*
   * CRUD 
   */
-  protected get(url: string, options={}, rawResponse=false) {
+
+  protected get(url: string, e: RequesElements) {
     const req = fetch(`${this.base}${url}`, {
-      headers: this.buildHeaders(),
+      headers: this.globalHeaders,
       ...options
     })
 
@@ -154,7 +172,7 @@ export class Fetch {
     return req.then(this.processResponse)
   }
 
-  protected post(url: string, payload: Array<any> | Object = {}) {
+  protected post(url: string, payload: Array<any> | Object={}) {
     let fullPayload 
     
     if (Array.isArray(payload)) {
@@ -169,32 +187,32 @@ export class Fetch {
     return fetch(`${this.base}${url}`, {
       method: 'POST',
       body: JSON.stringify(fullPayload),
-      headers: this.buildHeaders(),
+      headers: this.globalHeaders,
       mode: "cors",
     }).then(this.processResponse)
   }
 
-  protected postForm(url: string, payload={}) {
-    const fullPayload = {
-      ...this.getGlobalPayload(),
-      ...payload
-    }
+  // protected postForm(url: string, payload={}) {
+  //   const fullPayload = {
+  //     ...this.getGlobalPayload(),
+  //     ...payload
+  //   }
 
-    const data = new FormData()
-    for (const payloadKey of Object.keys(fullPayload)) {
-      // @ts-ignore
-      data.append(payloadKey, fullPayload[payloadKey])
-    }
+  //   const data = new FormData()
+  //   for (const payloadKey of Object.keys(fullPayload)) {
+  //     // @ts-ignore
+  //     data.append(payloadKey, fullPayload[payloadKey])
+  //   }
 
-    const headers = this.buildHeaders("multipart/form-data")
+  //   const headers = this.buildHeaders("multipart/form-data")
 
-    return fetch(`${this.base}${url}`, {
-      method: 'POST',
-      body: data,
-      headers: headers,
-      mode: "cors",
-    }).then(this.processResponse)
-  }
+  //   return fetch(`${this.base}${url}`, {
+  //     method: 'POST',
+  //     body: data,
+  //     headers: headers,
+  //     mode: "cors",
+  //   }).then(this.processResponse)
+  // }
 
   protected patch(url: string, payload={}) {
     const fullPayload = {
@@ -204,14 +222,14 @@ export class Fetch {
     return fetch(`${this.base}${url}`, {
       method: 'PATCH',
       body: JSON.stringify(fullPayload),
-      headers: this.buildHeaders(),
+      headers: this.globalHeaders,
     }).then(this.processResponse)
   }
 
   protected delete(url: string) {
     return fetch(`${this.base}${url}`, {
       method: 'DELETE',
-      headers: this.buildHeaders(),
+      headers: this.globalHeaders,
     }).then(this.processResponse)
   }
 }

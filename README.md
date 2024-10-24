@@ -1,6 +1,10 @@
 # JustFetch
 
-Este proyecto es una pequeña biblioteca basada en `fetch` que permite hacer peticiones de una forma más rápida considerando el crear una clase con métodos para la interacción con el api.
+Este proyecto es una pequeña biblioteca basada en `fetch` y `typescript` que permite hacer peticiones de una forma más rápida considerando el crear una clase con métodos para la interacción con el api.
+
+```bash
+$ npm i @evesan/justfetch
+```
 
 La biblioteca expone dos clases:
 - Fetch
