@@ -145,13 +145,36 @@ export class Fetch {
   }
 
   private buildRequestDetails(e: RequesElements) {
-    const headers = this.globalHeaders
-    const payload = this.getGlobalPayload()
-    const options = this.globalOptions
+    const reqHeaders = Object.assign({}, this.globalHeaders)
+    let options = Object.assign({}, this.globalOptions)
+    let payload = Object.assign({}, this.getGlobalPayload())
 
-    // if (e.headers) {
-    //   e.headers.forEach(h => headers )
-    // }
+    if (e.headers) e.headers.forEach((value, key) => reqHeaders.set(key, value))
+    if (e.options) {
+      options = {
+        ...options,
+        ...e.options
+      }
+    }
+
+    if (e.payload) {
+      if (Array.isArray(e.payload)) {
+        payload = e.payload
+      } else {
+        payload = {
+          ...payload,
+          ...e.payload
+        }
+      }
+    }
+    }
+
+    return {
+      headers: reqHeaders,
+      ...options,
+
+    }
+    
   }
 
 
