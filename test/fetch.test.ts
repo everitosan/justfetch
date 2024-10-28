@@ -10,7 +10,7 @@ type CatInfo = {
 class CatApi extends Fetch {
 
   getRandom(): Promise<Array<CatInfo>> {
-    return this.get("/v1/images/search")
+    return this.get("/v1/images/search", { options: {credentials: "same-origin"} })
   }
   
   badRequest() {

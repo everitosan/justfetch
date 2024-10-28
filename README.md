@@ -3,7 +3,7 @@
 Este proyecto es una pequeña biblioteca basada en `fetch` y `typescript` que permite hacer peticiones de una forma más rápida considerando el crear una clase con métodos para la interacción con el api.
 
 ```bash
-$ npm i @evesan/justfetch
+$ npm i justfetch-ts
 ```
 
 La biblioteca expone dos clases:
@@ -37,6 +37,7 @@ class CatApi extends Fetch {
 }
 
 const cat = new CatApi("https://api.thecatapi.com")
+  .addHeader("Content-Type", "application/json")
 ```
 Al momento de hacer peticiones, los status codes que por definición son considerados como no exitosos, crearán una excepción, permitiendo hacer uso del catch para su manejo.
 
@@ -70,23 +71,34 @@ cat.removeGlobalPayload("location")
 ```
 
 ### Error Middlewares
-Permite agregar callbacks cuando es que sucede un error de forma global en la clase.
+Permite agregar callbacks para manejar errores en cualquiera de las peticiones que sean accionadas por la clase. 
 
 ```ts
 cat.setErrrorMiddleware(FetchErrorType.BadRequest, (httpResponse: Response) => {
   alert("Verificar el request")
 })
+
+cat.setErrrorMiddleware(FetchErrorType.Unauthorized, (httpResponse: Response) => {
+  alert("Ups!! parece que no tienes permisos para hacer eso")
+})
 ```
 
-De esta forma, cada que ocurra un error que devuelva un 400 en cualquier petición realizada por esta clase, se ejecutarán los middlewares asociados. Se pueden agregar uno o más registrándolos uno por uno.
+De esta forma, cada que ocurra un error que devuelva un 400 o 401 en cualquier petición realizada por esta clase, se ejecutarán los middlewares asociados.
 
 ### Autorización
 
-En caso de que se necesite agregar un JsonWebToken, puede hacerlo con:
+En caso de que se necesite agregar configuración para mandar credenciales o setear algún token, puede agregarlo una sola vez al inicio o por petición específica:
 ```ts
-cat.setAuthToken("Bearer", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c")
+
+  new CatApi("https://api.thecatapi.com")
+    .setOptions({credentials: "same-origin"})
+    .addHeader("Authorization", "Bearer fhsofu023elkqjr09iqldjaw-edowqaoeu09fa")
+
   .
   .
   .
-cat.deleteAuthToken()
+
+  getRandom(): Promise<Array<CatInfo>> {
+    return this.get("/v1/images/search", { options: {credentials: "same-origin"} })
+  }
 ```

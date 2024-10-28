@@ -1,6 +1,6 @@
 {
-  "name": "@evesan/justfetch",
-  "version": "0.0.1",
+  "name": "justfetch-ts",
+  "version": "0.0.2",
   "main": "./src/index.ts",
   "author": "everitosan",
   "keywords": ["fetch", "typescript", "simple", "simplefetch", "justfetch"],
