@@ -44,9 +44,11 @@ type Options = {
 type RequesElements = {
   options?: Options
   headers?: Headers,
-  payload: Array<any> | Object,
-  rawResponse: boolean
+  payload?: Array<any> | Object,
+  rawResponse?: boolean
 }
+
+type RequestMethod = "GET" | "POST" | "PATCH" | "DELETE"
 
 /*
 * Fetch base classs
@@ -144,115 +146,93 @@ export class Fetch {
     throw new FetchError(errorType, response, status)
   }
 
-  private buildRequestDetails(e: RequesElements) {
-    const reqHeaders = Object.assign({}, this.globalHeaders)
+  private buildRequestDetails(method: RequestMethod, e: RequesElements) {
+    const reqHeaders: Headers = new Headers()
     let options = Object.assign({}, this.globalOptions)
     let payload = Object.assign({}, this.getGlobalPayload())
-
+    
+    this.globalHeaders.forEach((value, key) => reqHeaders.set(key, value))
+  
+    // Merge headers
     if (e.headers) e.headers.forEach((value, key) => reqHeaders.set(key, value))
+
+    // Merge options
     if (e.options) {
-      options = {
-        ...options,
+        options = {
+          ...options,
         ...e.options
       }
     }
-
+    
+    // Merge payloads
     if (e.payload) {
       if (Array.isArray(e.payload)) {
         payload = e.payload
-      } else {
+      } else { // only if payload is not an array it will merge global and local payload
         payload = {
           ...payload,
           ...e.payload
         }
       }
     }
-    }
 
-    return {
-      headers: reqHeaders,
-      ...options,
-
+    if (method === "GET" ) {
+      return {
+        headers: reqHeaders,
+        ...options
+      }
     }
     
-  }
+    console.log("#########################")
+    console.log(reqHeaders.get("Content-Type"))
+    console.log("------------------------")
+    // Build Body
+    const contentType = reqHeaders.get("Content-Type")
+    let body
 
+    if (contentType) {
+      if ( contentType.includes("json")) {
+        body = JSON.stringify(payload)
+      } else if (contentType.includes("multipart/form-data")) {
+        body = new FormData()
+        for (const payloadKey of Object.keys(payload)) {
+          body.append(payloadKey, payload[payloadKey])
+        }
+      }
+    }
+    
+    return {
+      method: method,
+      headers: reqHeaders,
+      body,
+      ...options
+    }
+  }
 
   /*
   * CRUD 
   */
 
-  protected get(url: string, e: RequesElements) {
-    const req = fetch(`${this.base}${url}`, {
-      headers: this.globalHeaders,
-      ...options
-    })
-
-    if (rawResponse) {
+  protected get(url: string, e: RequesElements = {}) {
+    const req = fetch(`${this.base}${url}`, this.buildRequestDetails('GET', e)) 
+    if (e.rawResponse) {
       return req
     } 
-
     return req.then(this.processResponse)
   }
 
-  protected post(url: string, payload: Array<any> | Object={}) {
-    let fullPayload 
-    
-    if (Array.isArray(payload)) {
-      fullPayload = payload
-    } else {
-      fullPayload = {
-        ...this.getGlobalPayload(),
-        ...payload
-      }
-    }
-
-    return fetch(`${this.base}${url}`, {
-      method: 'POST',
-      body: JSON.stringify(fullPayload),
-      headers: this.globalHeaders,
-      mode: "cors",
-    }).then(this.processResponse)
+  protected post(url: string, e: RequesElements={}) {
+    return fetch(`${this.base}${url}`, this.buildRequestDetails("POST", e))
+      .then(this.processResponse)
   }
 
-  // protected postForm(url: string, payload={}) {
-  //   const fullPayload = {
-  //     ...this.getGlobalPayload(),
-  //     ...payload
-  //   }
-
-  //   const data = new FormData()
-  //   for (const payloadKey of Object.keys(fullPayload)) {
-  //     // @ts-ignore
-  //     data.append(payloadKey, fullPayload[payloadKey])
-  //   }
-
-  //   const headers = this.buildHeaders("multipart/form-data")
-
-  //   return fetch(`${this.base}${url}`, {
-  //     method: 'POST',
-  //     body: data,
-  //     headers: headers,
-  //     mode: "cors",
-  //   }).then(this.processResponse)
-  // }
-
-  protected patch(url: string, payload={}) {
-    const fullPayload = {
-      ...this.getGlobalPayload(),
-      ...payload
-    }
-    return fetch(`${this.base}${url}`, {
-      method: 'PATCH',
-      body: JSON.stringify(fullPayload),
-      headers: this.globalHeaders,
-    }).then(this.processResponse)
+  protected patch(url: string, e: RequesElements={}) {
+    return fetch(`${this.base}${url}`, this.buildRequestDetails("PATCH", e))
+      .then(this.processResponse)
   }
 
-  protected delete(url: string) {
-    return fetch(`${this.base}${url}`, {
-      method: 'DELETE',
-      headers: this.globalHeaders,
-    }).then(this.processResponse)
+  protected delete(url: string, e: RequesElements={}) {
+    return fetch(`${this.base}${url}`, this.buildRequestDetails("DELETE", e))
+      .then(this.processResponse)
   }
 }
