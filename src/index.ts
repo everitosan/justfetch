@@ -44,7 +44,7 @@ type Options = {
 type RequesElements = {
   options?: Options
   headers?: Headers,
-  payload?: Array<any> | Object,
+  payload?: Array<any> | FormData | Object ,
   rawResponse?: boolean
 }
 
@@ -122,7 +122,6 @@ export class Fetch {
   * This method analyse response to throw real errors, not simple JS ugly ones
   */
   protected processResponse = async (httpResponse: Response) => {
-
     const status = httpResponse.status
     const contentType = httpResponse.headers.get("content-type")
     let response = (contentType && contentType.includes("application/json")) ? await httpResponse.json() : await httpResponse.text()
@@ -146,15 +145,18 @@ export class Fetch {
     throw new FetchError(errorType, response, status)
   }
 
-  private buildRequestDetails(method: RequestMethod, e: RequesElements) {
+  public buildRequestDetails(method: RequestMethod, e: RequesElements): RequestInit {
     const reqHeaders: Headers = new Headers()
     let options = Object.assign({}, this.globalOptions)
     let payload = Object.assign({}, this.getGlobalPayload())
     
     this.globalHeaders.forEach((value, key) => reqHeaders.set(key, value))
-  
+    
+    
     // Merge headers
-    if (e.headers) e.headers.forEach((value, key) => reqHeaders.set(key, value))
+    if (e.headers) e.headers.forEach((value, key) => {
+      reqHeaders.set(key, value)
+    })
 
     // Merge options
     if (e.options) {
@@ -163,18 +165,7 @@ export class Fetch {
         ...e.options
       }
     }
-    
-    // Merge payloads
-    if (e.payload) {
-      if (Array.isArray(e.payload)) {
-        payload = e.payload
-      } else { // only if payload is not an array it will merge global and local payload
-        payload = {
-          ...payload,
-          ...e.payload
-        }
-      }
-    }
+  
 
     if (method === "GET" ) {
       return {
@@ -182,23 +173,30 @@ export class Fetch {
         ...options
       }
     }
-    
-    console.log("#########################")
-    console.log(reqHeaders.get("Content-Type"))
-    console.log("------------------------")
-    // Build Body
-    const contentType = reqHeaders.get("Content-Type")
-    let body
+  
+    // If is not GET request we 
+    //  -> set content-type based in payload
+    //  -> set body in correct format
+    if (e.payload instanceof FormData) {
+      // if payload is formdata, remove content type
+      reqHeaders.delete("Content-Type")
+    } else {
+      reqHeaders.set("Content-Type", "application/json")
+    }
 
-    if (contentType) {
-      if ( contentType.includes("json")) {
-        body = JSON.stringify(payload)
-      } else if (contentType.includes("multipart/form-data")) {
-        body = new FormData()
-        for (const payloadKey of Object.keys(payload)) {
-          body.append(payloadKey, payload[payloadKey])
-        }
-      }
+    // Merge payload only works for formData and json
+    let body: string | FormData 
+    if (e.payload instanceof FormData) {
+      // !todo 
+      // add to form data global payload
+      body = e.payload
+    } else if (Array.isArray(e.payload)) {
+      body = JSON.stringify(e.payload)
+    } else {
+      body = JSON.stringify({
+        ...payload,
+        ...e.payload
+      })
     }
     
     return {

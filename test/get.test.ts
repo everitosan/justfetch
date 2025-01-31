@@ -23,7 +23,6 @@ class CatApi extends Fetch {
 }
 const w = new CatApi("https://api.thecatapi.com")
   .setOptions({credentials: "same-origin"})
-  .addHeader("Content-Type", "application/json")
   .addHeader("Authorization", "Bearer fhsofu023elkqjr09iqldjaw-edowqaoeu09fa")
 
 describe("Fetch implementation", () => {
